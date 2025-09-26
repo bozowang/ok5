@@ -1,96 +1,75 @@
-import React from 'react';
-import type { CartItem } from '../types';
-import { SHIPPING_FEE } from '../constants';
+import React, { useState } from 'react';
+import { CartItem } from '../types';
 
-/**
- * CartView 組件的 props 介面。
- */
-interface CartViewProps {
-  /** 購物車中的項目列表 */
+interface CheckoutViewProps {
   cart: CartItem[];
-  /** 更新商品數量的回呼函數 */
-  onUpdateQuantity: (itemId: string, newQuantity: number) => void;
-  /** 移除商品的回呼函數 */
-  onRemoveItem: (itemId: string) => void;
-  /** 前往結帳的回呼函數 */
-  onCheckout: () => void;
-  /** 返回上一頁的回呼函數 */
+  isLoading: boolean;
+  onSubmitOrder: (customerDetails: { name: string; address: string; phone: string }) => void;
   onBack: () => void;
 }
 
-/**
- * 顯示購物車內容的視圖組件。
- * @param {CartViewProps} props - 組件的 props。
- * @returns {React.ReactElement} CartView 組件。
- */
-const CartView: React.FC<CartViewProps> = ({ cart, onUpdateQuantity, onRemoveItem, onCheckout, onBack }) => {
-  const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const total = subtotal > 0 ? subtotal + SHIPPING_FEE : 0;
+const CheckoutView: React.FC<CheckoutViewProps> = ({ cart, isLoading, onSubmitOrder, onBack }) => {
+  const [name, setName] = useState('');
+  const [address, setAddress] = useState('');
+  const [phone, setPhone] = useState('');
+  
+  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (name && address && phone && !isLoading) {
+      onSubmitOrder({ name, address, phone });
+    }
+  };
 
   return (
-    <div className="bg-white rounded-lg p-6 shadow-lg my-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b pb-4">
-        <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4 md:mb-0">您的購物車</h2>
-        <button onClick={onBack} className="text-gray-600 hover:text-red-500 flex items-center">
-          <i className="fas fa-shopping-bag mr-2"></i>繼續購物
-        </button>
+    <div className="container mx-auto p-4 max-w-2xl">
+      <button onClick={onBack} className="mb-4 text-blue-600 hover:underline">
+        &larr; Back to Cart
+      </button>
+      <h2 className="text-3xl font-bold mb-6">Checkout</h2>
+      
+      <div className="bg-gray-50 p-4 rounded-md mb-6">
+        <h3 className="font-bold text-lg mb-2">Order Summary</h3>
+        {cart.map(item => (
+          <div key={item.id} className="flex justify-between">
+            <span>{item.name} x {item.quantity}</span>
+            <span>${(item.price * item.quantity).toFixed(2)}</span>
+          </div>
+        ))}
+        <hr className="my-2" />
+        <div className="flex justify-between font-bold">
+          <span>Total</span>
+          <span>${total.toFixed(2)}</span>
+        </div>
       </div>
-      {cart.length === 0 ? (
-        <div className="text-center text-gray-500 py-12">
-          <i className="fas fa-shopping-cart text-5xl mb-4 text-gray-300"></i>
-          <p className="text-lg">您的購物車是空的。</p>
-          <button onClick={onBack} className="mt-4 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded">
-            開始點餐
-          </button>
-        </div>
-      ) : (
+
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <div className="space-y-4 mb-6">
-            {cart.map(item => (
-              <div key={item.id} className="flex flex-col sm:flex-row items-center justify-between p-3 border rounded-lg">
-                <div className="flex-grow mb-2 sm:mb-0 text-center sm:text-left">
-                  <p className="font-semibold">{item.name}</p>
-                  <p className="text-sm text-gray-500">NT$ {item.price}</p>
-                </div>
-                <div className="flex items-center space-x-2 my-2 sm:my-0">
-                  <button onClick={() => onUpdateQuantity(item.id, item.quantity - 1)} className="w-8 h-8 bg-gray-200 rounded-full font-bold hover:bg-gray-300">-</button>
-                  <span className="w-10 text-center font-semibold">{item.quantity}</span>
-                  <button onClick={() => onUpdateQuantity(item.id, item.quantity + 1)} className="w-8 h-8 bg-gray-200 rounded-full font-bold hover:bg-gray-300">+</button>
-                </div>
-                <div className="flex items-center">
-                  <p className="w-24 text-right font-bold mr-4">NT$ {item.price * item.quantity}</p>
-                  <button onClick={() => onRemoveItem(item.id)} className="text-red-500 hover:text-red-700" aria-label={`從購物車移除 ${item.name}`}>
-                    <i className="fas fa-trash-alt"></i>
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="border-t pt-4">
-            <div className="flex justify-between mb-2 text-gray-600">
-              <span>小計：</span>
-              <span>NT$ {subtotal}</span>
-            </div>
-            <div className="flex justify-between mb-2 text-gray-600">
-              <span>外送費：</span>
-              <span>NT$ {SHIPPING_FEE}</span>
-            </div>
-            <div className="flex justify-between font-bold text-xl mt-4 pt-4 border-t">
-              <span>總計：</span>
-              <span>NT$ {total}</span>
-            </div>
-            <button
-              onClick={onCheckout}
-              disabled={cart.length === 0}
-              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg mt-6 transition-colors duration-300 disabled:bg-gray-400"
-            >
-              前往結帳
-            </button>
-          </div>
+          <label htmlFor="name" className="block text-sm font-medium text-gray-700">Full Name</label>
+          <input type="text" id="name" value={name} onChange={e => setName(e.target.value)} required disabled={isLoading} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100" />
         </div>
-      )}
+        <div>
+          <label htmlFor="address" className="block text-sm font-medium text-gray-700">Address</label>
+          <input type="text" id="address" value={address} onChange={e => setAddress(e.target.value)} required disabled={isLoading} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100" />
+        </div>
+        <div>
+          <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Phone Number</label>
+          <input type="tel" id="phone" value={phone} onChange={e => setPhone(e.target.value)} required disabled={isLoading} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100" />
+        </div>
+        <button type="submit" disabled={isLoading} className="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700 flex justify-center items-center disabled:bg-gray-400 disabled:cursor-not-allowed">
+            {isLoading ? (
+                <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mr-3"></div>
+                    <span>Processing...</span>
+                </>
+            ) : (
+                'Place Order'
+            )}
+        </button>
+      </form>
     </div>
   );
 };
 
-export default CartView;
+export default CheckoutView;
